@@ -1,6 +1,6 @@
-[아두이노 코드]
+//[아두이노 코드]
 
-불꽃 감지센서
+//불꽃 감지센서
 
 int flame = A0;
 int buzz = 5;
@@ -35,7 +35,7 @@ void loop()
 	delay(500);
 }
 
-가스 감지센서
+//가스 감지센서
 
 const int gas = A0;
 const int led = 9;
