@@ -1,0 +1,121 @@
+#include <SoftwareSerial.h>
+#include <Servo.h>
+ 
+//DC
+#define LEFT1_A 
+#define LEFT1_B 
+
+#define RIGHT1_A 
+#define RIGHT1_B 
+
+ 
+//초음파 센서
+#define IR_TRIG 8
+#define IR_ECHO 7
+
+//servo
+Servo servo;
+int pos = 90;    // 각 위치
+
+ 
+void setup() {
+  Serial.begin(9600);
+ 
+  //핀모드 설정
+  pinMode(LEFT1_A, OUTPUT);
+  pinMode(RIGHT1_A, OUTPUT);
+  pinMode(LEFT1_B, OUTPUT);
+  pinMode(RIGHT1_B, OUTPUT);
+ 
+  pinMode(IR_TRIG, OUTPUT);
+  pinMode(IR_ECHO, INPUT);
+  servo.attach(12);
+}
+ 
+void loop() {
+  float duration, distance;
+  digitalWrite(IR_TRIG, HIGH);
+  delay(10);
+  digitalWrite(IR_TRIG, LOW);
+ 
+  //초음파센서를 위한 거리 측정
+  duration = pulseIn(IR_ECHO, HIGH);
+  distance = ((float)(340 * duration) / 10000) / 2; //거리를 cm로 표현
+  Serial.print("\nDIstance : ");
+  Serial.println(distance);
+     
+  //장애물 유무에 따른 이동
+  if(distance < 20) {         //20cm 이내 장애물 감지
+     Serial.println("stop");
+     stop();
+     Serial.println("backward");
+     backward();  //후진
+     int rnd = random(0,2);   //좌/우회전 랜덤처리
+     if(rnd == 0){
+        Serial.println("right");
+        right();
+     }else{
+        Serial.println("left");
+        left();
+     }
+   }else{                     //장애물 무
+     Serial.println("forward");
+     forward();
+   }
+
+    if(BTSerial.available())  //블루투스로 데이터 받았으면
+  {
+    char data=(char)BTSerial.read();
+    if(data=='x')  //블루투스로 받은 데이터가 x일때
+    {
+      pos=y; //각 y조정
+    }
+    else if(data=='')
+    {
+      pos=;
+    }
+   /* servo.write(pos); //각을 다시 가운데로 돌려놓는 코드
+    delay(1000);
+    pos=90;
+    servo.write(pos);*/
+  }
+}
+ 
+void forward(){
+  digitalWrite(LEFT1_A, HIGH);
+  digitalWrite(LEFT1_B, LOW);
+  digitalWrite(RIGHT1_A, HIGH);
+  digitalWrite(RIGHT1_B, LOW);
+
+void backward(){
+  digitalWrite(LEFT1_A, LOW);
+  digitalWrite(LEFT1_B, HIGH);
+  digitalWrite(RIGHT1_A, LOW);
+  digitalWrite(RIGHT1_B, HIGH);
+ 
+  delay(500);
+}
+void left(){
+  digitalWrite(LEFT1_A, LOW);
+  digitalWrite(LEFT1_B, HIGH);
+  digitalWrite(RIGHT1_A, HIGH);
+  digitalWrite(RIGHT1_B, LOW);
+
+  delay(1000);
+}
+void right(){
+  digitalWrite(LEFT1_A, HIGH);
+  digitalWrite(LEFT1_B, LOW);
+  digitalWrite(RIGHT1_A, LOW);
+  digitalWrite(RIGHT1_B, HIGH);
+
+  delay(1000);
+}
+void stop(){
+  digitalWrite(LEFT1_A, LOW);
+  digitalWrite(LEFT1_B, LOW);
+  digitalWrite(RIGHT1_A, LOW);
+  digitalWrite(RIGHT1_B, LOW);
+
+  delay(1000);
+}
