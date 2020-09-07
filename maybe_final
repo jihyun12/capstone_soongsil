@@ -1,0 +1,214 @@
+#include <SoftwareSerial.h>
+#include <Servo.h>
+char incommingMsg;
+char* income_char = 0;
+
+SoftwareSerial HM10(9,10);
+
+//모터
+#define LEFT1_A 2
+#define LEFT1_B 3
+
+#define RIGHT1_A 4
+#define RIGHT1_B 5
+
+ //적외선 센서
+#define IRL 7
+#define IRR 6
+
+Servo servo;  // object 생성
+Servo leftServo;
+Servo rightServo;
+
+int pos = 90;    // 각 위치
+
+
+void setup() {
+  Serial.begin(9600);
+  //핀모드 설정
+  pinMode(LEFT1_A, OUTPUT);
+  pinMode(RIGHT1_A, OUTPUT);
+  pinMode(LEFT1_B, OUTPUT);
+  pinMode(RIGHT1_B, OUTPUT);
+
+  servo.attach(8);
+  leftServo.attach(9);
+  rightServo.attach(10);
+}
+
+void loop() {
+////////////////////////////////////////////////////////////////////
+//    HM-10 블루투스 모듈과 시리얼모니터로 AT 통신하게 해주는 코드.     //
+///////////////////////////////////////////////////////////////////
+
+  //incommingMsg로 읽은 글자를 inData에 이어붙여 스트링 만들고
+  //inDataBuf의 char형 포인터에 담아 HM10에 한번에 write함.
+
+  String income = "";
+  
+  while(Serial.available()){   //시리얼에 읽을 값이 있으면
+    income += (char)Serial.read(); //income안에 해당 내용 저장
+  }
+   
+  if(income != 0){ //income에 내용이 있으면
+    Serial.print(income);//시리얼에 해당 내용 전송
+    income_char = (char*)malloc(sizeof(char)*income.length()+1);
+    income.toCharArray(income_char, income.length()+1);
+    delay(10);
+    if(strncmp(income_char, "BC1", 3) == 0){
+      Serial.println("!!!!!!");
+    }
+    else if(strncmp(income_char, "BC2", 3) == 0){
+    }
+    else if(strncmp(income_char, "BC3", 3) == 0){
+    }
+  }
+  delay(10);
+  
+
+ String inData = "";
+  char* inDataBuf = 0;
+  while(Serial.available()){
+   incommingMsg = Serial.read();
+   inData = inData + incommingMsg;
+  }
+  inDataBuf = (char*)malloc(sizeof(char)*inData.length()+1);
+  inData.toCharArray(inDataBuf, inData.length()+1);
+  Serial.write(inDataBuf);
+  
+
+///////////////////////////////////////////////////////////////////
+//  기본 직진, 장애물 감지해서 피해서 주행하는 코드.                     //
+///////////////////////////////////////////////////////////////////
+////측정
+
+  //초음파센서를 위한 거리 
+
+  //장애물 유무에 따른 이동
+  if(Serial.available()) {        
+    if(income_char=="BC1") 
+    {
+      if(digitalRead(IRL)==HIGH&&digitalRead(IRR)==HIGH){
+        Serial.println("forward");
+        forward();
+        }
+        sweep();
+        if(strncmp(inDataBuf, "up", 2) == 0){
+         leftServo.write(180);
+         rightServo.write(0);
+         Serial.println("up");
+         delay(1500);
+         }
+        else if(strncmp(inDataBuf, "down" ,4) == 0){
+         leftServo.write(0);
+         rightServo.write(180);
+         Serial.println("down");
+         delay(1500);
+        }
+   
+    }
+    else if(income_char=="BC2")
+    {
+      Serial.println("right");
+      right();
+      if(digitalRead(IRL)==HIGH&&digitalRead(IRR)==HIGH){
+        Serial.println("forward");
+        forward();
+        }
+        sweep();
+        if(strncmp(inDataBuf, "up", 2) == 0){
+        leftServo.write(180);
+        rightServo.write(0);
+        Serial.println("up");
+        delay(1500);
+        }
+        else if(strncmp(inDataBuf, "down" ,4) == 0){
+        leftServo.write(0);
+        rightServo.write(180);
+        Serial.println("down");
+        delay(1500);
+        }
+      
+    }
+    else if(income_char=="BC3")
+    {
+       Serial.println("left");
+       left();
+       if(digitalRead(IRL)==HIGH&&digitalRead(IRR)==HIGH){
+        Serial.println("forward");
+        forward();
+        }
+        sweep();
+        if(strncmp(inDataBuf, "up", 2) == 0){
+        leftServo.write(180);
+        rightServo.write(0);
+        Serial.println("up");
+        delay(1500);
+        }
+        else if(strncmp(inDataBuf, "down" ,4) == 0){
+        leftServo.write(0);
+        rightServo.write(180);
+        Serial.println("down");
+        delay(1500);
+        }
+    }
+  }
+}
+
+//주행 함수
+void forward(){
+  digitalWrite(LEFT1_A, HIGH);
+  digitalWrite(LEFT1_B, LOW);
+  digitalWrite(RIGHT1_A, HIGH);
+  digitalWrite(RIGHT1_B, LOW);
+ }
+void backward(){
+  digitalWrite(LEFT1_A, LOW);
+  digitalWrite(LEFT1_B, HIGH);
+  digitalWrite(RIGHT1_A, LOW);
+  digitalWrite(RIGHT1_B, HIGH);
+ 
+  delay(500);
+}
+void left(){
+  digitalWrite(LEFT1_A, LOW);
+  digitalWrite(LEFT1_B, HIGH);
+  digitalWrite(RIGHT1_A, HIGH);
+  digitalWrite(RIGHT1_B, LOW);
+
+  delay(1000);
+}
+void right(){
+  digitalWrite(LEFT1_A, HIGH);
+  digitalWrite(LEFT1_B, LOW);
+  digitalWrite(RIGHT1_A, LOW);
+  digitalWrite(RIGHT1_B, HIGH);
+
+  delay(1000);
+}
+void stop(){
+  digitalWrite(LEFT1_A, LOW);
+  digitalWrite(LEFT1_B, LOW);
+  digitalWrite(RIGHT1_A, LOW);
+  digitalWrite(RIGHT1_B, LOW);
+
+  delay(1000);
+}
+void sweep(){
+  for (pos = 0; pos <= 180; pos += 1) { // 0->180
+    servo.write(pos);              // 스크린에 현위치 표시
+    delay(1500);                    
+  }
+  for (pos = 180; pos >= 0; pos -= 1) { // 180->0
+    servo.write(pos);              
+    delay(1500);                       
+  }
+}
+
+//////////////////////////////////////////////////////
+//    변수 내부 값 시리얼모니터로 출력해주는 함수.       //
+/////////////////////////////////////////////////////
+void printValue(String tag, int value){
+    Serial.print(tag + " : ");
+    Serial.println(value);
+}
